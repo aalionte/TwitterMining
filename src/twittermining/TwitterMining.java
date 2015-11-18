@@ -5,9 +5,20 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.DefaultWeightedEdge;
+import org.jgrapht.graph.SimpleWeightedGraph;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -15,15 +26,23 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 public class TwitterMining {
-	public static void main(String[] args) throws IOException, ParseException {
+	
+	// FILE PATH: CHANGE HERE 
+	//private static String fileJsonInput = "E:/TwitterMining/data/NewYorkOneWeek/NewYork-2015-2-23";
+	//private static String fileTxtOutput = "E:/Github/TwitterMining/TwitterMining.txt";
+	
+	private static String fileJsonInput = "/Users/huydinh/Cours/TPT32/Project/dataAthensWeek/NewYorkOneWeek/NewYork-2015-2-23";
+	private static String fileTxtOutput = "/Users/huydinh/Documents/workspace/TwitterMining/data/processedData/TwitterMining.txt";
+	
+	public static void main(String[] args) throws IOException, ParseException {	
 		
-		// FILE PATH: CHANGE HERE 
+		//processData();
+		buildGraph();
 		
-		String fileJsonInput = "E:/TwitterMining/data/NewYorkOneWeek/NewYork-2015-2-23";
-		String fileTxtOutput = "E:/Github/TwitterMining/TwitterMining.txt";
-		
-		// *******************************************
-		
+	}
+
+	private static void processData() throws IOException, ParseException {
+		// TODO Auto-generated method stub
 		FileReader myFile = new FileReader(fileJsonInput);
 		BufferedReader myBuf = new BufferedReader(myFile);
 		BufferedWriter myWriter = new BufferedWriter(new FileWriter(fileTxtOutput));
@@ -72,4 +91,52 @@ public class TwitterMining {
 		System.out.println("FINISHED");
 	}
 
+	private static void buildGraph() throws IOException {
+		int count = 0;
+		SimpleWeightedGraph<String, DefaultWeightedEdge> hashtagGraph = new SimpleWeightedGraph<String, DefaultWeightedEdge>(DefaultWeightedEdge.class);
+		Set<Set<String>> allHashtagSet = new HashSet<Set<String>>();
+		
+		List<String> lines = Files.readAllLines(Paths.get(fileTxtOutput), StandardCharsets.UTF_8);
+		for (int i = 0; i < lines.size(); i++) {
+			List<String> hashtagList = Arrays.asList(lines.get(i).split(" "));
+			for (int u = 0; u < hashtagList.size(); u++)
+				hashtagList.set(u, hashtagList.get(u).toLowerCase());
+			
+			Set<String> hashtagSet = new HashSet<String>(hashtagList);
+			if (!allHashtagSet.contains(hashtagSet)) {
+				count++;
+				allHashtagSet.add(hashtagSet);
+				hashtagList = new ArrayList<String>(hashtagSet);
+				
+				for (int u = 0; u < hashtagList.size(); u++)
+					if (!hashtagGraph.containsVertex(hashtagList.get(u)))
+						hashtagGraph.addVertex(hashtagList.get(u));
+				
+				
+				for (int u = 0; u < hashtagList.size() - 1; u++)
+					for (int v = u + 1; v < hashtagList.size(); v++) {
+						if (!hashtagGraph.containsEdge(hashtagList.get(u), hashtagList.get(v)))
+							hashtagGraph.addEdge(hashtagList.get(u), hashtagList.get(v));
+						else {
+							DefaultWeightedEdge edge = hashtagGraph.getEdge(hashtagList.get(u), hashtagList.get(v));
+							hashtagGraph.setEdgeWeight(edge, hashtagGraph.getEdgeWeight(edge) + 1.0);
+						}
+					}
+			}
+		}
+		
+        System.out.println(hashtagGraph.toString());
+        
+        
+        for (DefaultWeightedEdge edge: hashtagGraph.edgeSet()) {
+        	if (hashtagGraph.getEdgeWeight(edge) > 10.0) {
+        		System.out.print(edge.toString() + " ");
+        		System.out.println(hashtagGraph.getEdgeWeight(edge));
+        	}
+        }
+        
+        System.out.println(count);
+	}
+
+	
 }
