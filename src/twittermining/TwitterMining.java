@@ -6,11 +6,16 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
+
+import jdk.nashorn.internal.ir.WhileNode;
 
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DefaultWeightedEdge;
@@ -31,25 +36,26 @@ public class TwitterMining {
 //	private static String userGitPath = "";
 
 	// FILE PATH 
-	private static String [] folderName = {"NewYorkOneWeek", "Oscars", "ParisSearchFeb", "ParisSearchJan"};
+	private static String [] folderName = {"TESTDATA","NewYorkOneWeek", "Oscars", "ParisSearchFeb", "ParisSearchJan"};
 	private static String targetFolder =  userDataPath + folderName[1]; // CHANGE idx HERE !!!!!!!
 	
 	private static String fileTxtOutput = userGitPath + "TwitterMining.txt";
-	private static String fileEdgeCalculation = userGitPath + "EdgeCalculation.txt";
-
+	private static String fileHashMapOutput = userGitPath + "HashMap.txt";
+	private static HashMap<String, Double> hashmapVertexWeight = new HashMap<String, Double>(); 
 	
 	// GLOBAL VARIABLES
 	static List<String> arrayHashtags = new ArrayList<String>();
 	static int counter = 0;	
+	static SimpleWeightedGraph<String, DefaultWeightedEdge> hashtagGraph = new SimpleWeightedGraph<String, DefaultWeightedEdge>(DefaultWeightedEdge.class);
+
 
 	public static void main(String[] args) throws IOException, ParseException {		
 		readFileFromFolder(targetFolder);		
 		buildGraph();
+		findSubgraphWithNodesUnder(10);
 	}
 	
-	private static void readFileFromFolder(String folderPath) throws IOException, ParseException{		
-		
-		
+	private static void readFileFromFolder(String folderPath) throws IOException, ParseException{			
 		File folder = new File(folderPath);
 		File[] listOfFiles = folder.listFiles();
 		
@@ -82,7 +88,7 @@ public class TwitterMining {
 		// TODO Auto-generated method stub
 		FileReader myFile = new FileReader(jsonFilePath);
 		BufferedReader myBuf = new BufferedReader(myFile);
-		BufferedWriter myWriter = new BufferedWriter(new FileWriter(fileTxtOutput));
+		BufferedWriter myWriter = new BufferedWriter(new FileWriter(fileTxtOutput, true));
 
 		JSONParser myParser = new JSONParser();
 		String line;
@@ -116,8 +122,6 @@ public class TwitterMining {
 					// Write to file txt
 					myWriter.write(listHashtagsOfTwit);
 					myWriter.newLine();
-
-				//	System.out.println(listHashtagsOfTwit);
 				}
 			}
 		}
@@ -128,80 +132,125 @@ public class TwitterMining {
 	private static void buildGraph() throws IOException {
 		System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
 		System.out.println("Start building graph");
-		
-		BufferedWriter myWriter = new BufferedWriter(new FileWriter(fileEdgeCalculation)); 
-		
+
 		int count = 0;
 		int vertexCount = 0;
-		SimpleWeightedGraph<String, DefaultWeightedEdge> hashtagGraph = new SimpleWeightedGraph<String, DefaultWeightedEdge>(DefaultWeightedEdge.class);
-	
-		// Read the input file (each line is a list of hashtags we had in each Twit)
-		List<String> lines = Files.readAllLines(Paths.get(fileTxtOutput), StandardCharsets.ISO_8859_1);
+
+		// Read the input file (each line is a list of hashtags we had in each
+		// Twit)
+		List<String> lines = Files.readAllLines(Paths.get(fileTxtOutput),
+				StandardCharsets.ISO_8859_1);
 		for (int i = 0; i < lines.size(); i++) {
-			
-			// hashtagList contains hashtags of ONE Twit 
+
+			// hashtagList contains hashtags of ONE Twit
 			List<String> hashtagList = Arrays.asList(lines.get(i).split(" "));
-			
+
 			// Replace the hashtag at idx i by its lower case
-			for (int u = 0; u < hashtagList.size(); u++) {				
+			for (int u = 0; u < hashtagList.size(); u++) {
 				hashtagList.set(u, hashtagList.get(u).toLowerCase());
 			}
-			
+
 			// Add new (unique) Vertex to the Graph
-			for (int u = 0; u < hashtagList.size(); u++){
-				if (!hashtagGraph.containsVertex(hashtagList.get(u))){
+			for (int u = 0; u < hashtagList.size(); u++) {
+				if (!hashtagGraph.containsVertex(hashtagList.get(u))) {
 					vertexCount++;
 					hashtagGraph.addVertex(hashtagList.get(u));
-				}					
+				}
 			}
-			
+
 			// Create the edges from each pair of hashtags in ONE Twit
-			if(hashtagList.size() > 2){
-				for (int u = 0; u < hashtagList.size() - 1; u++){
+			if (hashtagList.size() > 2) {
+				for (int u = 0; u < hashtagList.size() - 1; u++) {
 					for (int v = u + 1; v < hashtagList.size(); v++) {
 						// Make sure that 2 hashtags are different
-						if(!hashtagList.get(u).equalsIgnoreCase(hashtagList.get(v))){
+						if (!hashtagList.get(u).equalsIgnoreCase(
+								hashtagList.get(v))) {
 							// Check if the Graph has this edge or not
-							if (!hashtagGraph.containsEdge(hashtagList.get(u),hashtagList.get(v))) {
-								if (hashtagGraph.containsEdge(hashtagList.get(v), hashtagList.get(u))) {
-									// Just to check if there is an error on duplication of A --> B and B --> A
+							if (!hashtagGraph.containsEdge(hashtagList.get(u),
+									hashtagList.get(v))) {
+								if (hashtagGraph.containsEdge(
+										hashtagList.get(v), hashtagList.get(u))) {
+									// Just to check if there is an error on
+									// duplication of A --> B and B --> A
 									System.out.println("Directed edge detected **********************************");
-								}									
+								}
 								count++;
-								hashtagGraph.addEdge(hashtagList.get(u), hashtagList.get(v));
-								
+								hashtagGraph.addEdge(hashtagList.get(u),
+										hashtagList.get(v));
+
 								// Initialize the weight
-								DefaultWeightedEdge edge = hashtagGraph.getEdge(hashtagList.get(u), hashtagList.get(v));
-								double Weight = 1.0;						
+								DefaultWeightedEdge edge = hashtagGraph
+										.getEdge(hashtagList.get(u),
+												hashtagList.get(v));
+								double Weight = 1.0;
 								hashtagGraph.setEdgeWeight(edge, Weight);
-							} 
+							}
 							// Add 1 to weight if edge occurs 1 more time
 							else {
-								DefaultWeightedEdge edge = hashtagGraph.getEdge(hashtagList.get(u), hashtagList.get(v));
-								double newWeight = hashtagGraph.getEdgeWeight(edge) + 1.0;						
+								DefaultWeightedEdge edge = hashtagGraph
+										.getEdge(hashtagList.get(u),
+												hashtagList.get(v));
+								double newWeight = hashtagGraph
+										.getEdgeWeight(edge) + 1.0;
 								hashtagGraph.setEdgeWeight(edge, newWeight);
 							}
-						}						
+						}
 					}
 				}
-			}							
-		}
-		
-		String output = "";		
-		for (DefaultWeightedEdge edge : hashtagGraph.edgeSet()) {
-			if (hashtagGraph.getEdgeWeight(edge) > 30.0) {				
-				// Write to the output file
-				output = edge.toString() + " " + hashtagGraph.getEdgeWeight(edge);				
-				myWriter.write(output);
-				myWriter.newLine();
 			}
 		}
-//		
-		myWriter.close();
-		
+		calVertexWeight();
 		System.out.println(vertexCount + " vertex");
 		System.out.println(count + " edges");
+		System.out.println("FINISHED Building Graph");
+		System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+	}
+	
+	private static void calVertexWeight() throws IOException {
+		System.out.println("Calulating Vertex Weight");
+		hashmapVertexWeight.clear();
+		
+		// Calculate the weight for each
+		for (String curVertex : hashtagGraph.vertexSet()) {
+			Set<DefaultWeightedEdge> listEdges = hashtagGraph
+					.edgesOf(curVertex);
+			double sumWeight = 0;
+			// Sum up the weight from each edge
+			for (DefaultWeightedEdge item : listEdges) {
+				sumWeight += hashtagGraph.getEdgeWeight(item);
+			}
+			hashmapVertexWeight.put(curVertex, sumWeight);
+		}
+		
+		System.out.println(hashtagGraph.vertexSet().size() + " vertex");
+		System.out.println(hashtagGraph.edgeSet().size() + " edges");
+		System.out.println(hashmapVertexWeight.size() + " hashmap records");
 		System.out.println("FINISHED");
 		System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+	}
+	
+	private static void deleteVertexWithWeightSmaller(Double threshold) throws IOException{
+		Iterator<Map.Entry<String, Double>> iteratorMap = hashmapVertexWeight.entrySet().iterator();
+		Map.Entry tmpEntry;
+		// Get the Vertex with the Weight smaller than the threshold
+		while(iteratorMap.hasNext()){
+			tmpEntry = iteratorMap.next();
+			if(Double.parseDouble(tmpEntry.getValue().toString()) < threshold) {
+				// Remove the vertex that has the weight is smaller than the threshold
+				hashtagGraph.removeVertex(tmpEntry.getKey().toString());
+			}
+		}		
+		calVertexWeight();
+	}
+	
+	private static void findSubgraphWithNodesUnder(int numOfNode) throws IOException{
+		double step = 0.0;
+		// Run the remove process until the graph G has less than numOfNode
+		while(hashtagGraph.vertexSet().size() > numOfNode){			
+			step += 1.0;
+			System.out.println("Delete vertex with weight small then: " + step);
+			deleteVertexWithWeightSmaller(step);
+		}		
+		System.out.println(hashtagGraph.vertexSet().toString());
 	}
 }
