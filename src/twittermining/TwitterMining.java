@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -25,6 +26,8 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils.Collections;
+
 public class TwitterMining {
 	
 	// For QUOC: CHANGE HERE
@@ -40,8 +43,8 @@ public class TwitterMining {
 	private static String targetFolder =  userDataPath + folderName[1]; // CHANGE idx HERE !!!!!!!
 	
 	private static String fileTxtOutput = userGitPath + "TwitterMining.txt";
-	private static String fileHashMapOutput = userGitPath + "HashMap.txt";
 	private static HashMap<String, Double> hashmapVertexWeight = new HashMap<String, Double>(); 
+	
 	
 	// GLOBAL VARIABLES
 	static List<String> arrayHashtags = new ArrayList<String>();
@@ -199,7 +202,8 @@ public class TwitterMining {
 				}
 			}
 		}
-		calVertexWeight();
+
+		calVertexWeight();		
 		System.out.println(vertexCount + " vertex");
 		System.out.println(count + " edges");
 		System.out.println("FINISHED Building Graph");
@@ -222,9 +226,9 @@ public class TwitterMining {
 			hashmapVertexWeight.put(curVertex, sumWeight);
 		}
 		
-		System.out.println(hashtagGraph.vertexSet().size() + " vertex");
-		System.out.println(hashtagGraph.edgeSet().size() + " edges");
-		System.out.println(hashmapVertexWeight.size() + " hashmap records");
+//		System.out.println(hashtagGraph.vertexSet().size() + " vertex");
+//		System.out.println(hashtagGraph.edgeSet().size() + " edges");
+//		System.out.println(hashmapVertexWeight.size() + " hashmap records");
 		System.out.println("FINISHED");
 		System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
 	}
@@ -235,7 +239,7 @@ public class TwitterMining {
 		// Get the Vertex with the Weight smaller than the threshold
 		while(iteratorMap.hasNext()){
 			tmpEntry = iteratorMap.next();
-			if(Double.parseDouble(tmpEntry.getValue().toString()) < threshold) {
+			if(Double.parseDouble(tmpEntry.getValue().toString()) <= threshold) {
 				// Remove the vertex that has the weight is smaller than the threshold
 				hashtagGraph.removeVertex(tmpEntry.getKey().toString());
 			}
@@ -245,12 +249,35 @@ public class TwitterMining {
 	
 	private static void findSubgraphWithNodesUnder(int numOfNode) throws IOException{
 		double step = 0.0;
+		double densityOfSubgraph = 0;
+		double GraphDensity = 0;
+		double min = 0;
+		SimpleWeightedGraph<String, DefaultWeightedEdge> hashtagTmpGraph = null;
+		
 		// Run the remove process until the graph G has less than numOfNode
 		while(hashtagGraph.vertexSet().size() > numOfNode){			
 			step += 1.0;
-			System.out.println("Delete vertex with weight small then: " + step);
-			deleteVertexWithWeightSmaller(step);
-		}		
+			deleteVertexWithWeightSmaller(step);							
+		}
+		
+		hashtagTmpGraph = (SimpleWeightedGraph<String, DefaultWeightedEdge>) hashtagGraph.clone();
+		
+		while (hashtagGraph.edgeSet().size() > 1) {			
+			min = java.util.Collections.min(hashmapVertexWeight.values());
+			deleteVertexWithWeightSmaller(min);
+			
+			GraphDensity = hashtagGraph.edgeSet().size()*1.0 / (hashtagGraph.vertexSet().size()*1.0);
+			densityOfSubgraph = hashtagTmpGraph.edgeSet().size()*1.0 / (hashtagTmpGraph.vertexSet().size()*1.0);
+			
+			System.out.println("density of subgraph H: " +densityOfSubgraph);
+			System.out.println("density of graph G: " +GraphDensity);
+			
+			
+			if(GraphDensity > densityOfSubgraph){
+				hashtagTmpGraph = (SimpleWeightedGraph<String, DefaultWeightedEdge>) hashtagGraph.clone();
+			}
+		}
+		hashtagGraph = (SimpleWeightedGraph<String, DefaultWeightedEdge>) hashtagTmpGraph.clone();
 		System.out.println(hashtagGraph.vertexSet().toString());
 	}
 }
