@@ -18,9 +18,11 @@ import java.util.concurrent.locks.ReadWriteLock;
 
 import jdk.nashorn.internal.ir.WhileNode;
 
+import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
+import org.jgrapht.graph.UndirectedWeightedSubgraph;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -35,8 +37,8 @@ public class TwitterMining {
 	private static String userGitPath = "E:/Github/TwitterMining/";
 	
 	// For HUY: CHANGE HERE
-//	private static String userDataPath = "";
-//	private static String userGitPath = "";
+//	private static String userDataPath = "/Users/huydinh/Cours/TPT32/Project/dataAthensWeek";
+//	private static String userGitPath = "/Users/huydinh/Cours/TPT32/Project/dataExtracted";
 
 	// FILE PATH 
 	private static String [] folderName = {"TESTDATA","NewYorkOneWeek", "Oscars", "ParisSearchFeb", "ParisSearchJan"};
@@ -50,7 +52,8 @@ public class TwitterMining {
 	static List<String> arrayHashtags = new ArrayList<String>();
 	static int counter = 0;	
 	static SimpleWeightedGraph<String, DefaultWeightedEdge> hashtagGraph = new SimpleWeightedGraph<String, DefaultWeightedEdge>(DefaultWeightedEdge.class);
-
+	static int numOfDenseSubgraph = 0;
+	static List<UndirectedWeightedSubgraph<String, DefaultWeightedEdge>> denseSubgraphList = new ArrayList<UndirectedWeightedSubgraph<String, DefaultWeightedEdge>>();
 
 	public static void main(String[] args) throws IOException, ParseException {		
 		readFileFromFolder(targetFolder);		
@@ -280,4 +283,56 @@ public class TwitterMining {
 		hashtagGraph = (SimpleWeightedGraph<String, DefaultWeightedEdge>) hashtagTmpGraph.clone();
 		System.out.println(hashtagGraph.vertexSet().toString());
 	}
+	
+	private static void findDenseSubgraph(UndirectedWeightedSubgraph<String, DefaultWeightedEdge> aGraph, int numOfNode) throws IOException{
+		if (aGraph.edgeSet().size() <= numOfNode) {
+			numOfDenseSubgraph++;
+			denseSubgraphList.add(aGraph);
+		}
+		
+//		double density = 0.0;
+//		if (aGraph.vertexSet().size() <= numOfNode) {
+//			for (DefaultWeightedEdge item: aGraph.edgeSet()) {
+//				density = density + aGraph.getEdgeWeight(item);
+//			}
+//			density = density / aGraph.vertexSet().size();
+//			
+//		}
+		// Calculate the weight
+		double minWeight = 1000000;
+		String minVertex = "";
+		
+		for (String curVertex : aGraph.vertexSet()) {
+			Set<DefaultWeightedEdge> listEdges = aGraph.edgesOf(curVertex);
+			double sumWeight = 0;
+			// Sum up the weight from each edge
+			for (DefaultWeightedEdge item : listEdges) {
+				sumWeight += aGraph.getEdgeWeight(item);
+			}
+			if (sumWeight < minWeight) {
+				minWeight = sumWeight;
+				minVertex = curVertex;
+			}
+		}
+		
+		aGraph.removeVertex(minVertex);
+		
+		ConnectivityInspector<String, DefaultWeightedEdge> connect = new ConnectivityInspector<String, DefaultWeightedEdge>(aGraph);
+		List<Set<String>> connectedComponents = connect.connectedSets();
+		
+		for (int i = 0; i < connectedComponents.size(); i++) {
+			Set<String> newVertexSet = connectedComponents.get(i);
+			Set<DefaultWeightedEdge> newEdgeSet = new HashSet<DefaultWeightedEdge>();
+			for (DefaultWeightedEdge item: aGraph.edgeSet()) {
+				if (newVertexSet.contains(aGraph.getEdgeSource(item)) || newVertexSet.contains(aGraph.getEdgeTarget(item))) {
+					newEdgeSet.add(item);
+				}
+			}
+			UndirectedWeightedSubgraph<String, DefaultWeightedEdge> aSubgraph = new UndirectedWeightedSubgraph<String, DefaultWeightedEdge>(aGraph, newVertexSet, newEdgeSet);
+			findDenseSubgraph(aSubgraph, numOfNode);
+		}
+		
+	}
+	
+	
 }
