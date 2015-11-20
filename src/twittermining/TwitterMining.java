@@ -119,98 +119,139 @@ public class TwitterMining {
 					hashtagValue = ((JSONObject) hashtags.get(i)).get("text").toString();
 					listHashtagsOfTwit += hashtagValue + " ";
 				}
-				if (arrayHashtags.indexOf(listHashtagsOfTwit) < 0) {
-					counter++;
-					// Store a new listHashtags to an array to check the
-					// duplication
-					arrayHashtags.add(listHashtagsOfTwit);
 
-					// Write to file txt
-					myWriter.write(listHashtagsOfTwit);
-					myWriter.newLine();
-				}
+				counter++;
+				// Store a new listHashtags to an array to check the
+				// duplication
+				arrayHashtags.add(listHashtagsOfTwit);
+
+				// Write to file txt
+				myWriter.write(listHashtagsOfTwit);
+				myWriter.newLine();				
 			}
 		}
 		myBuf.close();
 		myWriter.close();
 	}
 
+//	private static void buildGraph() throws IOException {
+//		System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+//		System.out.println("Start building graph");
+//
+//		int count = 0;
+//		int vertexCount = 0;
+//
+//		// Read the input file (each line is a list of hashtags we had in each
+//		// Twit)
+//		List<String> lines = Files.readAllLines(Paths.get(fileTxtOutput),
+//				StandardCharsets.ISO_8859_1);
+//		for (int i = 0; i < lines.size(); i++) {
+//
+//			// hashtagList contains hashtags of ONE Twit
+//			List<String> hashtagList = Arrays.asList(lines.get(i).split(" "));
+//
+//			// Replace the hashtag at idx i by its lower case
+//			for (int u = 0; u < hashtagList.size(); u++) {
+//				hashtagList.set(u, hashtagList.get(u).toLowerCase());
+//			}
+//
+//			// Add new (unique) Vertex to the Graph
+//			for (int u = 0; u < hashtagList.size(); u++) {
+//				if (!hashtagGraph.containsVertex(hashtagList.get(u))) {
+//					vertexCount++;
+//					hashtagGraph.addVertex(hashtagList.get(u));
+//				}
+//			}
+//
+//			// Create the edges from each pair of hashtags in ONE Twit
+//			if (hashtagList.size() > 2) {
+//				for (int u = 0; u < hashtagList.size() - 1; u++) {
+//					for (int v = u + 1; v < hashtagList.size(); v++) {
+//						// Make sure that 2 hashtags are different
+//						if (!hashtagList.get(u).equalsIgnoreCase(
+//								hashtagList.get(v))) {
+//							// Check if the Graph has this edge or not
+//							if (!hashtagGraph.containsEdge(hashtagList.get(u),
+//									hashtagList.get(v))) {
+//								if (hashtagGraph.containsEdge(
+//										hashtagList.get(v), hashtagList.get(u))) {
+//									// Just to check if there is an error on
+//									// duplication of A --> B and B --> A
+//									System.out.println("Directed edge detected **********************************");
+//								}
+//								count++;
+//								hashtagGraph.addEdge(hashtagList.get(u),
+//										hashtagList.get(v));
+//
+//								// Initialize the weight
+//								DefaultWeightedEdge edge = hashtagGraph
+//										.getEdge(hashtagList.get(u),
+//												hashtagList.get(v));
+//								double Weight = 1.0;
+//								hashtagGraph.setEdgeWeight(edge, Weight);
+//							}
+//							// Add 1 to weight if edge occurs 1 more time
+//							else {
+//								DefaultWeightedEdge edge = hashtagGraph
+//										.getEdge(hashtagList.get(u),
+//												hashtagList.get(v));
+//								double newWeight = hashtagGraph
+//										.getEdgeWeight(edge) + 1.0;
+//								hashtagGraph.setEdgeWeight(edge, newWeight);
+//							}
+//						}
+//					}
+//				}
+//			}
+//		}
+//
+//		calVertexWeight();		
+//		System.out.println(vertexCount + " vertex");
+//		System.out.println(count + " edges");
+//		System.out.println("FINISHED Building Graph");
+//		System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+//	}
+	
 	private static void buildGraph() throws IOException {
 		System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
 		System.out.println("Start building graph");
-
-		int count = 0;
-		int vertexCount = 0;
-
-		// Read the input file (each line is a list of hashtags we had in each
-		// Twit)
-		List<String> lines = Files.readAllLines(Paths.get(fileTxtOutput),
-				StandardCharsets.ISO_8859_1);
+		
+		Set<Set<String>> allHashtagSet = new HashSet<Set<String>>();
+		
+		List<String> lines = Files.readAllLines(Paths.get(fileTxtOutput), StandardCharsets.ISO_8859_1);
 		for (int i = 0; i < lines.size(); i++) {
-
-			// hashtagList contains hashtags of ONE Twit
 			List<String> hashtagList = Arrays.asList(lines.get(i).split(" "));
-
-			// Replace the hashtag at idx i by its lower case
-			for (int u = 0; u < hashtagList.size(); u++) {
+			for (int u = 0; u < hashtagList.size(); u++)
 				hashtagList.set(u, hashtagList.get(u).toLowerCase());
-			}
-
-			// Add new (unique) Vertex to the Graph
-			for (int u = 0; u < hashtagList.size(); u++) {
-				if (!hashtagGraph.containsVertex(hashtagList.get(u))) {
-					vertexCount++;
-					hashtagGraph.addVertex(hashtagList.get(u));
-				}
-			}
-
-			// Create the edges from each pair of hashtags in ONE Twit
-			if (hashtagList.size() > 2) {
-				for (int u = 0; u < hashtagList.size() - 1; u++) {
+			
+			Set<String> hashtagSet = new HashSet<String>(hashtagList);
+			if (!allHashtagSet.contains(hashtagSet)) {
+				allHashtagSet.add(hashtagSet);
+				hashtagList = new ArrayList<String>(hashtagSet);
+				
+				for (int u = 0; u < hashtagList.size(); u++)
+					if (!hashtagGraph.containsVertex(hashtagList.get(u))){
+						hashtagGraph.addVertex(hashtagList.get(u));
+					}
+				
+				
+				for (int u = 0; u < hashtagList.size() - 1; u++)
 					for (int v = u + 1; v < hashtagList.size(); v++) {
-						// Make sure that 2 hashtags are different
-						if (!hashtagList.get(u).equalsIgnoreCase(
-								hashtagList.get(v))) {
-							// Check if the Graph has this edge or not
-							if (!hashtagGraph.containsEdge(hashtagList.get(u),
-									hashtagList.get(v))) {
-								if (hashtagGraph.containsEdge(
-										hashtagList.get(v), hashtagList.get(u))) {
-									// Just to check if there is an error on
-									// duplication of A --> B and B --> A
-									System.out.println("Directed edge detected **********************************");
-								}
-								count++;
-								hashtagGraph.addEdge(hashtagList.get(u),
-										hashtagList.get(v));
-
-								// Initialize the weight
-								DefaultWeightedEdge edge = hashtagGraph
-										.getEdge(hashtagList.get(u),
-												hashtagList.get(v));
-								double Weight = 1.0;
-								hashtagGraph.setEdgeWeight(edge, Weight);
-							}
-							// Add 1 to weight if edge occurs 1 more time
-							else {
-								DefaultWeightedEdge edge = hashtagGraph
-										.getEdge(hashtagList.get(u),
-												hashtagList.get(v));
-								double newWeight = hashtagGraph
-										.getEdgeWeight(edge) + 1.0;
-								hashtagGraph.setEdgeWeight(edge, newWeight);
-							}
+						if (!hashtagGraph.containsEdge(hashtagList.get(u), hashtagList.get(v)))
+							hashtagGraph.addEdge(hashtagList.get(u), hashtagList.get(v));
+						else {
+							DefaultWeightedEdge edge = hashtagGraph.getEdge(hashtagList.get(u), hashtagList.get(v));
+							hashtagGraph.setEdgeWeight(edge, hashtagGraph.getEdgeWeight(edge) + 1.0);
 						}
 					}
-				}
 			}
 		}
-
 		calVertexWeight();		
-		System.out.println(vertexCount + " vertex");
-		System.out.println(count + " edges");
+		System.out.println(hashtagGraph.vertexSet().size() + " vertex");
+		System.out.println(hashtagGraph.edgeSet().size() + " edges");
 		System.out.println("FINISHED Building Graph");
-		System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+		System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");	
+     
 	}
 	
 	private static void calVertexWeight() throws IOException {
