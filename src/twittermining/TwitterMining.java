@@ -33,18 +33,20 @@ import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils.Collections;
 public class TwitterMining {
 	
 	// For QUOC: CHANGE HERE
-//	private static String userDataPath = "E:/TwitterMining/data/";
-//	private static String userGitPath = "E:/Github/TwitterMining/";
+	private static String userDataPath = "E:/TwitterMining/data/";
+	private static String userGitPath = "E:/Github/TwitterMining/";
 	
 	// For HUY: CHANGE HERE
-	private static String userDataPath = "/Users/huydinh/Cours/TPT32/Project/dataAthensWeek";
-	private static String userGitPath = "";
+//	private static String userDataPath = "/Users/huydinh/Cours/TPT32/Project/dataAthensWeek";
+//	private static String userGitPath = "";
 
 	// FILE PATH 
 	private static String [] folderName = {"TESTDATA","NewYorkOneWeek", "Oscars", "ParisSearchFeb", "ParisSearchJan"};
 	private static String targetFolder =  userDataPath + folderName[1]; // CHANGE idx HERE !!!!!!!
 	
 	private static String fileTxtOutput = userGitPath + "TwitterMining.txt";
+	private static String fileEdgeOutput = userGitPath + "Edge.txt";
+	private static String fileUserOutput = userGitPath + "User.txt";
 	private static HashMap<String, Double> hashmapVertexWeight = new HashMap<String, Double>(); 
 	
 	
@@ -56,30 +58,39 @@ public class TwitterMining {
 	static List<UndirectedWeightedSubgraph<String, DefaultWeightedEdge>> denseSubgraphList = new ArrayList<UndirectedWeightedSubgraph<String, DefaultWeightedEdge>>();
 
 	public static void main(String[] args) throws IOException, ParseException {		
-		//readFileFromFolder(targetFolder);		
-		buildGraph();
-		//findSubgraphWithNodesUnder(10);
+		long startTime = System.currentTimeMillis();		
 		
-		UndirectedWeightedSubgraph<String, DefaultWeightedEdge> aSubgraph = new UndirectedWeightedSubgraph<String, DefaultWeightedEdge>(hashtagGraph, hashtagGraph.vertexSet(), hashtagGraph.edgeSet());
-		findDenseSubgraph(aSubgraph, 10);
-		System.out.println(aSubgraph.toString());
-		System.out.println(numOfDenseSubgraph);
-		double max = 0.0;
-		int ind = -1;
-		for (int i = 0; i < denseSubgraphList.size(); i++) {
-			double weight = 0.0;
-			for (DefaultWeightedEdge edge: denseSubgraphList.get(i).edgeSet()) {
-				weight = weight + denseSubgraphList.get(i).getEdgeWeight(edge);
-			}
-			weight = weight / denseSubgraphList.get(i).vertexSet().size();
-			if (weight > max) {
-				max = weight;
-				ind = i;
-			}
-			
-		}
-		System.out.println(max);
-		System.out.println(denseSubgraphList.get(ind).toString());
+		readFileFromFolder(targetFolder);		
+		buildGraph();
+		findSubgraphWithNodesUnder(10);
+		
+//		UndirectedWeightedSubgraph<String, DefaultWeightedEdge> aSubgraph = new UndirectedWeightedSubgraph<String, DefaultWeightedEdge>(hashtagGraph, hashtagGraph.vertexSet(), hashtagGraph.edgeSet());
+//
+//		findDenseSubgraph(aSubgraph, 10);
+//		System.out.println(aSubgraph.toString());
+		
+//		System.out.println("No.Dense subgraph: " + numOfDenseSubgraph);
+//		
+//		double max = 0.0;
+//		int ind = -1;
+//		for (int i = 0; i < denseSubgraphList.size(); i++) {
+//			double weight = 0.0;
+//			for (DefaultWeightedEdge edge: denseSubgraphList.get(i).edgeSet()) {
+//				weight = weight + denseSubgraphList.get(i).getEdgeWeight(edge);
+//			}
+//			weight = weight / denseSubgraphList.get(i).vertexSet().size();
+//			if (weight > max) {
+//				max = weight;
+//				ind = i;
+//			}
+//			
+//		}
+//		System.out.println(max);
+//		System.out.println(denseSubgraphList.get(ind).toString());
+		
+		long endTime   = System.currentTimeMillis();
+		long totalTime = endTime - startTime;
+		System.out.println("Running time: " + totalTime/1000 + "s");
 	}
 	
 	private static void readFileFromFolder(String folderPath) throws IOException, ParseException{			
@@ -116,6 +127,7 @@ public class TwitterMining {
 		FileReader myFile = new FileReader(jsonFilePath);
 		BufferedReader myBuf = new BufferedReader(myFile);
 		BufferedWriter myWriter = new BufferedWriter(new FileWriter(fileTxtOutput, true));
+		BufferedWriter myWriterUser = new BufferedWriter(new FileWriter(fileUserOutput, true));
 
 		JSONParser myParser = new JSONParser();
 		String line;
@@ -130,7 +142,10 @@ public class TwitterMining {
 			// Get Entities key and the key hashtags
 			JSONObject entity = (JSONObject) aTwit.get("entities");
 			JSONArray hashtags = (JSONArray) entity.get("hashtags");
-
+			
+			JSONObject user = (JSONObject) aTwit.get("user");
+		//	System.out.println(user);
+			
 			String hashtagValue;
 
 			if (hashtags.size() != 0) {
@@ -147,91 +162,18 @@ public class TwitterMining {
 				arrayHashtags.add(listHashtagsOfTwit);
 
 				// Write to file txt
+				myWriterUser.write(user.get("id").toString());
+				myWriterUser.newLine();
+				
 				myWriter.write(listHashtagsOfTwit);
 				myWriter.newLine();				
 			}
 		}
 		myBuf.close();
 		myWriter.close();
+		myWriterUser.close();
 	}
 
-//	private static void buildGraph() throws IOException {
-//		System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-//		System.out.println("Start building graph");
-//
-//		int count = 0;
-//		int vertexCount = 0;
-//
-//		// Read the input file (each line is a list of hashtags we had in each
-//		// Twit)
-//		List<String> lines = Files.readAllLines(Paths.get(fileTxtOutput),
-//				StandardCharsets.ISO_8859_1);
-//		for (int i = 0; i < lines.size(); i++) {
-//
-//			// hashtagList contains hashtags of ONE Twit
-//			List<String> hashtagList = Arrays.asList(lines.get(i).split(" "));
-//
-//			// Replace the hashtag at idx i by its lower case
-//			for (int u = 0; u < hashtagList.size(); u++) {
-//				hashtagList.set(u, hashtagList.get(u).toLowerCase());
-//			}
-//
-//			// Add new (unique) Vertex to the Graph
-//			for (int u = 0; u < hashtagList.size(); u++) {
-//				if (!hashtagGraph.containsVertex(hashtagList.get(u))) {
-//					vertexCount++;
-//					hashtagGraph.addVertex(hashtagList.get(u));
-//				}
-//			}
-//
-//			// Create the edges from each pair of hashtags in ONE Twit
-//			if (hashtagList.size() > 2) {
-//				for (int u = 0; u < hashtagList.size() - 1; u++) {
-//					for (int v = u + 1; v < hashtagList.size(); v++) {
-//						// Make sure that 2 hashtags are different
-//						if (!hashtagList.get(u).equalsIgnoreCase(
-//								hashtagList.get(v))) {
-//							// Check if the Graph has this edge or not
-//							if (!hashtagGraph.containsEdge(hashtagList.get(u),
-//									hashtagList.get(v))) {
-//								if (hashtagGraph.containsEdge(
-//										hashtagList.get(v), hashtagList.get(u))) {
-//									// Just to check if there is an error on
-//									// duplication of A --> B and B --> A
-//									System.out.println("Directed edge detected **********************************");
-//								}
-//								count++;
-//								hashtagGraph.addEdge(hashtagList.get(u),
-//										hashtagList.get(v));
-//
-//								// Initialize the weight
-//								DefaultWeightedEdge edge = hashtagGraph
-//										.getEdge(hashtagList.get(u),
-//												hashtagList.get(v));
-//								double Weight = 1.0;
-//								hashtagGraph.setEdgeWeight(edge, Weight);
-//							}
-//							// Add 1 to weight if edge occurs 1 more time
-//							else {
-//								DefaultWeightedEdge edge = hashtagGraph
-//										.getEdge(hashtagList.get(u),
-//												hashtagList.get(v));
-//								double newWeight = hashtagGraph
-//										.getEdgeWeight(edge) + 1.0;
-//								hashtagGraph.setEdgeWeight(edge, newWeight);
-//							}
-//						}
-//					}
-//				}
-//			}
-//		}
-//
-//		calVertexWeight();		
-//		System.out.println(vertexCount + " vertex");
-//		System.out.println(count + " edges");
-//		System.out.println("FINISHED Building Graph");
-//		System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-//	}
 	
 	private static void buildGraph() throws IOException {
 		System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
@@ -240,7 +182,7 @@ public class TwitterMining {
 		Set<Set<String>> allHashtagSet = new HashSet<Set<String>>();
 		
 		List<String> lines = Files.readAllLines(Paths.get(fileTxtOutput), StandardCharsets.ISO_8859_1);
-		for (int i = 0; i < 1000; i++) {
+		for (int i = 0; i < lines.size(); i++) {
 			List<String> hashtagList = Arrays.asList(lines.get(i).split(" "));
 			for (int u = 0; u < hashtagList.size(); u++)
 				hashtagList.set(u, hashtagList.get(u).toLowerCase());
@@ -267,6 +209,16 @@ public class TwitterMining {
 					}
 			}
 		}
+//		BufferedWriter myBuf = new BufferedWriter(new FileWriter(fileEdgeOutput, true));
+//		for(DefaultWeightedEdge edge : hashtagGraph.edgeSet()){
+//			if(hashtagGraph.getEdgeWeight(edge) >= 50){
+//				myBuf.write(edge + " " + hashtagGraph.getEdgeWeight(edge));
+//				myBuf.newLine();
+//			}
+//			
+//		}
+//		myBuf.close();
+		
 		calVertexWeight();		
 		System.out.println(hashtagGraph.vertexSet().size() + " vertex");
 		System.out.println(hashtagGraph.edgeSet().size() + " edges");
@@ -326,13 +278,25 @@ public class TwitterMining {
 		}
 		
 		hashtagTmpGraph = (SimpleWeightedGraph<String, DefaultWeightedEdge>) hashtagGraph.clone();
+		double weightH = 0;
+		double weightG = 0;
 		
 		while (hashtagGraph.edgeSet().size() > 1) {			
 			min = java.util.Collections.min(hashmapVertexWeight.values());
 			deleteVertexWithWeightSmaller(min);
+			weightG = 0;
+			weightH = 0;
 			
-			GraphDensity = hashtagGraph.edgeSet().size()*1.0 / (hashtagGraph.vertexSet().size()*1.0);
-			densityOfSubgraph = hashtagTmpGraph.edgeSet().size()*1.0 / (hashtagTmpGraph.vertexSet().size()*1.0);
+			for(DefaultWeightedEdge edge : hashtagTmpGraph.edgeSet()){
+				weightH += hashtagTmpGraph.getEdgeWeight(edge);
+			}
+			
+			for(DefaultWeightedEdge edge : hashtagGraph.edgeSet()){
+				weightG += hashtagGraph.getEdgeWeight(edge);
+			}
+			
+			GraphDensity = weightG*1.0 / (hashtagGraph.vertexSet().size()*1.0);
+			densityOfSubgraph = weightH*1.0 / (hashtagTmpGraph.vertexSet().size()*1.0);
 			
 			System.out.println("density of subgraph H: " +densityOfSubgraph);
 			System.out.println("density of graph G: " +GraphDensity);
@@ -343,7 +307,7 @@ public class TwitterMining {
 			}
 		}
 		hashtagGraph = (SimpleWeightedGraph<String, DefaultWeightedEdge>) hashtagTmpGraph.clone();
-		System.out.println(hashtagGraph.vertexSet().toString());
+		System.out.println("The wanted subgraph: " + hashtagGraph.vertexSet().toString());
 	}
 	
 	private static void findDenseSubgraph(UndirectedWeightedSubgraph<String, DefaultWeightedEdge> aGraph, int numOfNode) throws IOException{
