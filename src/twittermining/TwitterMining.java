@@ -33,12 +33,12 @@ import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils.Collections;
 public class TwitterMining {
 	
 	// For QUOC: CHANGE HERE
-	private static String userDataPath = "E:/TwitterMining/data/";
-	private static String userGitPath = "E:/Github/TwitterMining/";
+//	private static String userDataPath = "E:/TwitterMining/data/";
+//	private static String userGitPath = "E:/Github/TwitterMining/";
 	
 	// For HUY: CHANGE HERE
-//	private static String userDataPath = "/Users/huydinh/Cours/TPT32/Project/dataAthensWeek";
-//	private static String userGitPath = "/Users/huydinh/Cours/TPT32/Project/dataExtracted";
+	private static String userDataPath = "/Users/huydinh/Cours/TPT32/Project/dataAthensWeek";
+	private static String userGitPath = "";
 
 	// FILE PATH 
 	private static String [] folderName = {"TESTDATA","NewYorkOneWeek", "Oscars", "ParisSearchFeb", "ParisSearchJan"};
@@ -56,9 +56,30 @@ public class TwitterMining {
 	static List<UndirectedWeightedSubgraph<String, DefaultWeightedEdge>> denseSubgraphList = new ArrayList<UndirectedWeightedSubgraph<String, DefaultWeightedEdge>>();
 
 	public static void main(String[] args) throws IOException, ParseException {		
-		readFileFromFolder(targetFolder);		
+		//readFileFromFolder(targetFolder);		
 		buildGraph();
-		findSubgraphWithNodesUnder(10);
+		//findSubgraphWithNodesUnder(10);
+		
+		UndirectedWeightedSubgraph<String, DefaultWeightedEdge> aSubgraph = new UndirectedWeightedSubgraph<String, DefaultWeightedEdge>(hashtagGraph, hashtagGraph.vertexSet(), hashtagGraph.edgeSet());
+		findDenseSubgraph(aSubgraph, 10);
+		System.out.println(aSubgraph.toString());
+		System.out.println(numOfDenseSubgraph);
+		double max = 0.0;
+		int ind = -1;
+		for (int i = 0; i < denseSubgraphList.size(); i++) {
+			double weight = 0.0;
+			for (DefaultWeightedEdge edge: denseSubgraphList.get(i).edgeSet()) {
+				weight = weight + denseSubgraphList.get(i).getEdgeWeight(edge);
+			}
+			weight = weight / denseSubgraphList.get(i).vertexSet().size();
+			if (weight > max) {
+				max = weight;
+				ind = i;
+			}
+			
+		}
+		System.out.println(max);
+		System.out.println(denseSubgraphList.get(ind).toString());
 	}
 	
 	private static void readFileFromFolder(String folderPath) throws IOException, ParseException{			
@@ -219,7 +240,7 @@ public class TwitterMining {
 		Set<Set<String>> allHashtagSet = new HashSet<Set<String>>();
 		
 		List<String> lines = Files.readAllLines(Paths.get(fileTxtOutput), StandardCharsets.ISO_8859_1);
-		for (int i = 0; i < lines.size(); i++) {
+		for (int i = 0; i < 1000; i++) {
 			List<String> hashtagList = Arrays.asList(lines.get(i).split(" "));
 			for (int u = 0; u < hashtagList.size(); u++)
 				hashtagList.set(u, hashtagList.get(u).toLowerCase());
@@ -329,6 +350,7 @@ public class TwitterMining {
 		if (aGraph.edgeSet().size() <= numOfNode) {
 			numOfDenseSubgraph++;
 			denseSubgraphList.add(aGraph);
+			return;
 		}
 		
 //		double density = 0.0;
